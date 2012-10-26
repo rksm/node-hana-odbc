@@ -54,9 +54,17 @@ Session.prototype.query = function(schema, sqlStatement, callback) {
     });
 }
 
+var sessionTable = {}
+
 var hanaInterface = {
 
-    createSession: function(config) { return new Session(config); }
+    getSession: function(config) {
+        if (!config.sessionKey) return new Session(config);
+        return sessionTable[config.sessionKey] ?
+            sessionTable[config.sessionKey] :
+            sessionTable[config.sessionKey] = new Session(config);
+    }
+
 }
 
 module.exports = hanaInterface;

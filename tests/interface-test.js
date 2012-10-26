@@ -61,7 +61,7 @@ var InterfaceTests = {
 
     "run simple query": function(test) {
         queryResult = defaultResult;
-        var session = hanaInterface.createSession({dsn: 'foo bar', db: db}), result;
+        var session = hanaInterface.getSession({dsn: 'foo bar', db: db}), result;
         session.query("fooSchema", "select * from fooTable", function(err, resultSet) { result = resultSet; });
         test.equals(1, openCalls);
         test.deepEqual(["set schema fooSchema", "select * from fooTable"], queries);
@@ -71,8 +71,9 @@ var InterfaceTests = {
 
     "run two queries in same session": function(test) {
         queryResult = defaultResult;
-        var session = hanaInterface.createSession({dsn: 'foo bar', db: db}), result;
+        var session = hanaInterface.getSession({sessionKey: 'bla bla', dsn: 'foo bar', db: db}), result;
         session.query("fooSchema", "select * from fooTable", function(err, resultSet) { result = resultSet; });
+        session = hanaInterface.getSession({sessionKey: 'bla bla'});
         session.query("fooSchema", "select bar from fooTable", function(err, resultSet) { result = resultSet; });
         test.equals(1, openCalls);
         test.deepEqual(["set schema fooSchema", "select * from fooTable", "select bar from fooTable"], queries);
