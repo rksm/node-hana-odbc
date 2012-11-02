@@ -6,10 +6,10 @@ var dsn = 'DSN=hana;'
         + 'UID=robertkrahn;'
         + 'PWD=Pa2e476f0';
 
-var session = hanaInterface.createSession({dsn: dsn});
+var session = hanaInterface.getSession({dsn: dsn});
 
 session.query('SFLIGHT', "select * from SAPLANE",
-                    function(err, results) {
-                        console.log(JSON.stringify(results, null, 2));
-                        console.log("done");
-                    })
+              function(err, results) {
+                  console.log(JSON.stringify(results, null, 2));
+                  console.log("done");
+              });
