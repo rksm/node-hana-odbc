@@ -1,10 +1,75 @@
-/*global */
+var util = require("util"),
+    odbc = require("odbc"),
+    async = require("async"),
+    db = new odbc.Database();
 
-// supposed to be used as a life_star (expressjs) subserver
-// http://lvpal310.pal.sap.corp:9101/hana-interface.xhtml
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-console.log("dir" + __dirname)
-var hanaInterface = require('./hana-interface');
+function Session(config) {
+    this.dsn = config.dsn;
+    this.db = config.db || new odbc.Database();
+
+    this.connectionEstablished = false;
+    this.connectInProgress = false;
+    this.afterConnectionCallbacks = [];
+    this.afterSchemaSelectCallbacks = [];
+    this.currentSchema = null;
+}
+
+Session.prototype.connect = function(callback) {
+    var session = this;
+    session.afterConnectionCallbacks.push(callback);
+    if (session.connectInProgress) return;
+    session.connectInProgress = true;
+    this.db.open(this.dsn, function() {
+        session.connectionEstablished = true;
+        session.connectInProgress = false;
+        while (session.afterConnectionCallbacks.length > 0) {
+            session.afterConnectionCallbacks.shift().call(session);
+        }
+    });
+}
+
+Session.prototype.selectSchema = function(schema, callback) {
+    var session = this;
+    session.afterSchemaSelectCallbacks.push(callback);
+    this.db.query("set schema " + schema, function(err, rows, moreResultSets) {
+        session.currentSchema = schema;
+        while (session.afterSchemaSelectCallbacks.length > 0) {
+            session.afterSchemaSelectCallbacks.shift().call(session);
+        }
+    });
+}
+
+Session.prototype.query = function(schema, sqlStatement, callback) {
+    if (!this.connectionEstablished) {
+        this.connect(this.query.bind(this, schema, sqlStatement, callback));
+        return;
+    }
+
+    if (this.currentSchema !== schema) {
+        this.selectSchema(schema, this.query.bind(this, schema, sqlStatement, callback));
+        return;
+    }
+    this.db.query(sqlStatement, function(err, rows, moreResultSets) {
+        callback(err, {rows: rows, hasMoreResultSets: moreResultSets});
+    });
+}
+
+var sessionTable = {};
+
+var hanaInterface = {
+
+    getSession: function(config) {
+        if (!config.sessionKey) return new Session(config);
+        return sessionTable[config.sessionKey] ?
+            sessionTable[config.sessionKey] :
+            sessionTable[config.sessionKey] = new Session(config);
+    }
+
+}
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 // see /etc/odbc.ini
 var dsn = 'DSN=hana;'
@@ -28,8 +93,7 @@ module.exports = function(baseRoute, app) {
 
         console.log('Running hana SQL query ' + data);
         session.query(data.schema, data.query, function(err, results) {
-            res.status(err ? 400 : 200);
-            res.send(err || results);
+            res.status(err ? 400 : 200).send(err || results);
         });
     });
 }
