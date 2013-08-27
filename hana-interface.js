@@ -19,7 +19,12 @@ Session.prototype.connect = function(callback) {
     session.afterConnectionCallbacks.push(callback);
     if (session.connectInProgress) return;
     session.connectInProgress = true;
-    this.db.open(this.dsn, function() {
+    this.db.open(this.dsn, function(err) {
+        if (err) {
+            console.error('Could not establish connection to HANA database: ', err);
+            callback(err);
+            return;
+        }
         session.connectionEstablished = true;
         session.connectInProgress = false;
         while (session.afterConnectionCallbacks.length > 0) {
@@ -54,17 +59,24 @@ Session.prototype.query = function(schema, sqlStatement, callback) {
     });
 }
 
+Session.prototype.close = function(callback) {
+    if (!this.db || !this.connectionEstablished) { callback(null); return; }
+    var self = this;
+    this.db.close(function(err) {
+    self.connectionEstablished = false;
+        callback(err);
+    });
+}
+
 var sessionTable = {}
 
 var hanaInterface = {
-
     getSession: function(config) {
         if (!config.sessionKey) return new Session(config);
         return sessionTable[config.sessionKey] ?
             sessionTable[config.sessionKey] :
             sessionTable[config.sessionKey] = new Session(config);
     }
-
 }
 
 module.exports = hanaInterface;
