@@ -6,20 +6,20 @@ var util = require("util"),
 function Session(config) {
     this.dsn = config.dsn;
     this.db = config.db || new odbc.Database();
-
     this.connectionEstablished = false;
     this.connectInProgress = false;
     this.afterConnectionCallbacks = [];
     this.afterSchemaSelectCallbacks = [];
+    this.afterCloseCallbacks = [];
     this.currentSchema = null;
 }
 
 Session.prototype.connect = function(callback) {
     var session = this;
-    session.afterConnectionCallbacks.push(callback);
+    callback && session.afterConnectionCallbacks.push(callback);
     if (session.connectInProgress) return;
     session.connectInProgress = true;
-    this.db.open(this.dsn, function(err) {
+    session.db.open(session.dsn, function(err) {
         if (err) {
             console.error('Could not establish connection to HANA database: ', err);
             callback(err);
@@ -28,54 +28,62 @@ Session.prototype.connect = function(callback) {
         session.connectionEstablished = true;
         session.connectInProgress = false;
         while (session.afterConnectionCallbacks.length > 0) {
-            session.afterConnectionCallbacks.shift().call(session);
+            session.afterConnectionCallbacks.shift().call(null, err, session);
         }
     });
 }
 
 Session.prototype.selectSchema = function(schema, callback) {
     var session = this;
-    session.afterSchemaSelectCallbacks.push(callback);
-    this.db.query("set schema " + schema, function(err, rows, moreResultSets) {
+    callback && session.afterSchemaSelectCallbacks.push(callback);
+    session.db.query("set schema " + schema, function(err, rows, moreResultSets) {
         session.currentSchema = schema;
         while (session.afterSchemaSelectCallbacks.length > 0) {
-            session.afterSchemaSelectCallbacks.shift().call(session);
+            session.afterSchemaSelectCallbacks.shift().call(null, err, session);
         }
     });
 }
 
 Session.prototype.query = function(schema, sqlStatement, callback) {
-    if (!this.connectionEstablished) {
-        this.connect(this.query.bind(this, schema, sqlStatement, callback));
+    var session = this;
+    if (!session.connectionEstablished) {
+        session.connect(function(err) {
+            if (err) callback(err);
+            else session.query(schema, sqlStatement, callback);
+        });
         return;
     }
 
-    if (this.currentSchema !== schema) {
-        this.selectSchema(schema, this.query.bind(this, schema, sqlStatement, callback));
+    if (session.currentSchema !== schema) {
+        session.selectSchema(schema, function(err) {
+            if (err) callback(err);
+            else session.query(schema, sqlStatement, callback);
+        });
         return;
     }
-    this.db.query(sqlStatement, function(err, rows, moreResultSets) {
+    session.db.query(sqlStatement, function(err, rows, moreResultSets) {
         callback(err, {rows: rows, hasMoreResultSets: moreResultSets});
     });
 }
 
 Session.prototype.close = function(callback) {
     if (!this.db || !this.connectionEstablished) { callback(null); return; }
-    var self = this;
-    this.db.close(function(err) {
-    self.connectionEstablished = false;
-        callback(err);
+    var session = this;
+    callback && session.afterCloseCallbacks.push(callback);
+    session.db.close(function(err) {
+        session.connectionEstablished = false;
+        while (session.afterCloseCallbacks.length > 0) {
+            session.afterCloseCallbacks.shift().call(null, err);
+        }
     });
 }
 
-var sessionTable = {}
-
 var hanaInterface = {
+    sessionTable: {},
     getSession: function(config) {
         if (!config.sessionKey) return new Session(config);
-        return sessionTable[config.sessionKey] ?
-            sessionTable[config.sessionKey] :
-            sessionTable[config.sessionKey] = new Session(config);
+        return this.sessionTable[config.sessionKey] || 
+              (this.sessionTable[config.sessionKey] = new Session(config));
     }
 }
 
