@@ -1,83 +1,24 @@
-var util = require("util"),
-    odbc = require("odbc"),
-    async = require("async"),
-    db = new odbc.Database();
+/*
+ * This code can be used to integrate with the expressjs framewrok
+ */
 
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+var hana = require('./hana-interface'),
+    util = require('util');
 
-function Session(config) {
-    this.dsn = config.dsn;
-    this.db = config.db || new odbc.Database();
-
-    this.connectionEstablished = false;
-    this.connectInProgress = false;
-    this.afterConnectionCallbacks = [];
-    this.afterSchemaSelectCallbacks = [];
-    this.currentSchema = null;
-}
-
-Session.prototype.connect = function(callback) {
-    var session = this;
-    session.afterConnectionCallbacks.push(callback);
-    if (session.connectInProgress) return;
-    session.connectInProgress = true;
-    this.db.open(this.dsn, function() {
-        session.connectionEstablished = true;
-        session.connectInProgress = false;
-        while (session.afterConnectionCallbacks.length > 0) {
-            session.afterConnectionCallbacks.shift().call(session);
+var dsn = 'DSN=hana;UID=%s;PWD=%s',
+    usage = {
+        method: "POST",
+        data: {
+            schema: "STRING",
+            query: "STRING",
+            password: "STRING",
+            user: "STRING"
         }
-    });
-}
-
-Session.prototype.selectSchema = function(schema, callback) {
-    var session = this;
-    session.afterSchemaSelectCallbacks.push(callback);
-    this.db.query("set schema " + schema, function(err, rows, moreResultSets) {
-        session.currentSchema = schema;
-        while (session.afterSchemaSelectCallbacks.length > 0) {
-            session.afterSchemaSelectCallbacks.shift().call(session);
-        }
-    });
-}
-
-Session.prototype.query = function(schema, sqlStatement, callback) {
-    if (!this.connectionEstablished) {
-        this.connect(this.query.bind(this, schema, sqlStatement, callback));
-        return;
-    }
-
-    if (this.currentSchema !== schema) {
-        this.selectSchema(schema, this.query.bind(this, schema, sqlStatement, callback));
-        return;
-    }
-    this.db.query(sqlStatement, function(err, rows, moreResultSets) {
-        callback(err, {rows: rows, hasMoreResultSets: moreResultSets});
-    });
-}
-
-var sessionTable = {};
-
-var hanaInterface = {
-
-    getSession: function(config) {
-        if (!config.sessionKey) return new Session(config);
-        return sessionTable[config.sessionKey] ?
-            sessionTable[config.sessionKey] :
-            sessionTable[config.sessionKey] = new Session(config);
-    }
-
-}
-
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-// see /etc/odbc.ini
-var dsn = 'DSN=hana;'
-        + 'UID=robertkrahn;'
-        + 'PWD=Pa2e476f0';
+    };
 
 module.exports = function(baseRoute, app) {
     app.all(baseRoute + '*', function(req, res, next) {
+        // enable CORS for cross-domain querying
         // see https://developer.mozilla.org/en-US/docs/HTTP_access_control#Preflighted_requests
         res.set({'Access-Control-Allow-Origin': '*'});
         res.set({'Access-Control-Allow-Methods': '*'}); // 'GET,POST,OPTIONS'
@@ -85,13 +26,18 @@ module.exports = function(baseRoute, app) {
         next();
     });
     app.get(baseRoute, function(req, res) {
-        res.send({usage: req.url + " POST with {schema: STRING, query: STRING}"});
-    })
+        res.json({usage: usage});
+    });
     app.post(baseRoute, function(req, res) {
-        var session = hanaInterface.getSession({dsn: dsn}),
-            data = req.body;
-
-        console.log('Running hana SQL query ' + data);
+        var data = req.body;
+        if (!data.schema || !data.query || !data.user || !data.password) {
+            console.log(usage)
+            res.status(400).json({usage: usage});
+            return;
+        }
+        var queryDsn = util.format(dsn, data.user, data.password),
+            session = hana.getSession({dsn: queryDsn});
+        console.log('Running hana SQL query ', data);
         session.query(data.schema, data.query, function(err, results) {
             res.status(err ? 400 : 200).send(err || results);
         });
