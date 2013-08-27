@@ -2,18 +2,18 @@
   "name": "node-hana",
   "version": "0.1.1",
   "description": "SAP HANA access via nodejs",
-  "main": "index.js",
+  "main": "hana-interface.js",
   "scripts": {
     "test": "node_modules/nodeunit/bin/nodeunit tests/*js"
   },
   "dependencies": {
-    "async": "*",
+    "async": ">=0.2",
     "odbc": "https://github.com/wankdanker/node-odbc/archive/v0.5.25.tar.gz"
   },
   "devDependencies": {
-    "nodeunit": "*"
+    "nodeunit": ">=0.8"
   },
-  "repository": "",
+  "repository": "https://github.com/rksm/node-hana.git",
   "author": "Robert Krahn",
   "license": "MIT"
 }
