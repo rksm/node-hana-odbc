@@ -16,8 +16,8 @@ var dsn = 'DSN=hana;UID=%s;PWD=%s',
         }
     };
 
-module.exports = function(baseRoute, app) {
-    app.all(baseRoute + '*', function(req, res, next) {
+module.exports = function(baseRoute, server) {
+    server.all(baseRoute + '*', function(req, res, next) {
         // enable CORS for cross-domain querying
         // see https://developer.mozilla.org/en-US/docs/HTTP_access_control#Preflighted_requests
         res.set({'Access-Control-Allow-Origin': '*'});
@@ -25,11 +25,13 @@ module.exports = function(baseRoute, app) {
         res.set({'Access-Control-Allow-Headers': 'CONTENT-TYPE'}); // for POST requests with payload
         next();
     });
-    app.get(baseRoute, function(req, res) {
+    server.get(baseRoute, function(req, res) {
         res.json({usage: usage});
     });
-    app.post(baseRoute, function(req, res) {
+    server.post(baseRoute, function(req, res) {
         var data = req.body;
+        // note that passing in the password via a POST request is really
+        // unsafe, especially if you don't use https!
         if (!data.schema || !data.query || !data.user || !data.password) {
             console.log(usage)
             res.status(400).json({usage: usage});
