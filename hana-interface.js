@@ -1,6 +1,5 @@
 var util = require("util"),
     odbc = require("odbc"),
-    async = require("async"),
     db = new odbc.Database();
 
 function Session(config) {
@@ -82,7 +81,7 @@ var hanaInterface = {
     sessionTable: {},
     getSession: function(config) {
         if (!config.sessionKey) return new Session(config);
-        return this.sessionTable[config.sessionKey] || 
+        return this.sessionTable[config.sessionKey] ||
               (this.sessionTable[config.sessionKey] = new Session(config));
     }
 }
