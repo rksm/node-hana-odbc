@@ -3,9 +3,7 @@
 // continously run with:
 // nodemon -x nodeunit tests/*js
 
-var hanaInterface = require('./../hana-interface'),
-    async = require('async');
-
+var hanaInterface = require('./../hana-interface');
 
 // -=-=-=-=-=-=-=-=-=-
 // mock db for testing
