@@ -4,7 +4,7 @@ node.js connection using node-odbc to
 
 [![](http://www.saphana.com/themes/generated_advanced_skin_global2/images/home.png)](http://www.saphana.com/welcome)
 
-# install
+# Install
 
 ## odbc backend
 
@@ -23,7 +23,7 @@ If a corporate firewall is bugging npm try
 
     $ npm --proxy http://proxy.pal.sap.corp:8080 --strict-ssl false install
 
-## from github
+## From github
 
 To install from github do
 
