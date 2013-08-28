@@ -1,4 +1,4 @@
-# node-hana
+# hana-odbc
 
 node.js connection using node-odbc to
 
@@ -13,22 +13,22 @@ For using it make sure you setup a data source (DSN) that points to a HANA
 instance. [Here](http://scn.sap.com/community/developer-center/hana/blog/2012/09/14/hana-with-odbc-on-ubuntu-1204)
 is a description for how to setup an odbc connection on Ubuntu.
 
-##  node-hana from npm
+##  hana-odbc from npm
 
-node-hana is on npm, to install it run
+hana-odbc is on npm, to install it run
 
-    $ npm install node-hana
+    $ npm install hana-odbc
 
 If a corporate firewall is bugging npm try
 
     $ npm --proxy http://proxy.pal.sap.corp:8080 --strict-ssl false install
 
-## From github
+## Or: from github (alternative to npm install above)
 
 To install from github do
 
-    $ git clone https://github.com/rksm/node-hana.git
-    $ cd node-hana
+    $ git clone https://github.com/rksm/node-hana-odbc.git
+    $ cd node-hana-odbc
     $ npm install
 
 # Usage
