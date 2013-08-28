@@ -21,7 +21,7 @@ hana-odbc is on npm, to install it run
 
 If a corporate firewall is bugging npm try
 
-    $ npm --proxy http://proxy.pal.sap.corp:8080 --strict-ssl false install
+    $ npm --proxy http://username:password@proxyservername:port --strict-ssl false install
 
 ## Or: from github (alternative to npm install above)
 
