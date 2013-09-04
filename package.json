@@ -1,6 +1,6 @@
 {
   "name": "hana-odbc",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "SAP HANA access for nodejs via odbc.",
   "main": "hana-interface.js",
   "scripts": {
